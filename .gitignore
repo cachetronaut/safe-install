@@ -1,0 +1,79 @@
+# macOS / filesystem noise
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editor and local workspace state
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# Local agent/tool state
+.codex/
+.claude/settings.local.json
+.claude/tmp/
+
+# Secrets and machine-local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.crt
+*.cert
+*.mobileprovision
+
+# Logs, temp files, and caches
+*.log
+*.tmp
+*.temp
+tmp/
+temp/
+.cache/
+.tmp/
+
+# Node / JavaScript package artifacts
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+coverage/
+.nyc_output/
+
+# Python package artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build and distribution output
+dist/
+build/
+site/
+out/
+*.egg-info/
+
+# Container/runtime leftovers
+.docker/
+docker-compose.override.yml

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+tool="$(basename "$0")"
+cmd="${1:-}"
+
+if [[ "${SAFE_INSTALL_BYPASS:-0}" == "1" ]]; then
+  cmd="__pass_through__"
+fi
+
+case "$cmd" in
+  install|i|ci|update|up|exec|x|init)
+    exec safe-install --pm "$tool" -- "$@"
+    ;;
+esac
+
+shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IFS=':' read -r -a path_parts <<< "$PATH"
+for dir in "${path_parts[@]}"; do
+  [[ "$dir" == "$shim_dir" ]] && continue
+  if [[ -x "$dir/$tool" ]]; then
+    exec "$dir/$tool" "$@"
+  fi
+done
+
+printf '%s wrapper: real %s not found on PATH\n' "$tool" "$tool" >&2
+exit 127

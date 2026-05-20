@@ -1,0 +1,18 @@
+{
+  "name": "safe-install-dev",
+  "description": "Development marketplace for safe-install dependency isolation",
+  "owner": {
+    "name": "Cachetronaut"
+  },
+  "plugins": [
+    {
+      "name": "safe-install",
+      "description": "Route package installs through disposable OrbStack/Docker containers from Claude Code.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Cachetronaut"
+      }
+    }
+  ]
+}

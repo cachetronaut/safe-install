@@ -1,0 +1,42 @@
+{
+  "name": "safe-install",
+  "version": "0.1.0",
+  "description": "Route package installs through disposable OrbStack/Docker containers for local development and coding agents.",
+  "author": {
+    "name": "Cachetronaut",
+    "url": "https://github.com/cachetronaut"
+  },
+  "homepage": "https://github.com/cachetronaut/safe-install",
+  "repository": "https://github.com/cachetronaut/safe-install",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "supply-chain",
+    "dependency-isolation",
+    "docker",
+    "orbstack"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "safe-install",
+    "shortDescription": "Isolated package installs for coding agents",
+    "longDescription": "Use safe-install to route npm, pnpm, uv, and pip install operations through disposable Docker-compatible containers with a project-only mount and disposable home directory.",
+    "developerName": "Cachetronaut",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Check whether package installs are protected.",
+      "Initialize safe-install for this repo.",
+      "Run a dry-run dependency install safely."
+    ],
+    "websiteURL": "https://github.com/cachetronaut/safe-install",
+    "privacyPolicyURL": "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "brandColor": "#2563EB",
+    "screenshots": []
+  }
+}

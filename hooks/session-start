@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+plugin_root="$(cd "$script_dir/.." && pwd)"
+safe_install="$plugin_root/bin/safe-install"
+
+if [[ -x "$safe_install" ]]; then
+  doctor_output="$("$safe_install" doctor 2>&1 || true)"
+else
+  doctor_output="safe-install binary was not found at $safe_install"
+fi
+
+message="safe-install plugin is enabled.
+
+Package-manager install commands should resolve through the plugin's bin wrappers:
+- pnpm install, pnpm add, pnpm update, pnpm dlx
+- npm install, npm ci, npm exec, npm init
+- uv sync, uv add, uv pip, uv tool, uv python
+- pip install, pip wheel, pip download
+
+The first real install will try to start OrbStack or Docker Desktop on macOS when Docker is not reachable.
+
+Current status:
+$doctor_output"
+
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+escaped_message="$(escape_for_json "$message")"
+
+if [[ -n "${CURSOR_PLUGIN_ROOT:-}" ]]; then
+  printf '{\n  "additional_context": "%s"\n}\n' "$escaped_message"
+elif [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$escaped_message"
+else
+  printf '{\n  "additionalContext": "%s"\n}\n' "$escaped_message"
+fi

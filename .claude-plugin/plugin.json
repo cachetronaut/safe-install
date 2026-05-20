@@ -1,0 +1,20 @@
+{
+  "name": "safe-install",
+  "description": "Route package installs through disposable OrbStack/Docker containers from Claude Code.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Cachetronaut"
+  },
+  "homepage": "https://github.com/cachetronaut/safe-install",
+  "repository": "https://github.com/cachetronaut/safe-install",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "supply-chain",
+    "docker",
+    "orbstack",
+    "npm",
+    "pnpm",
+    "python"
+  ]
+}

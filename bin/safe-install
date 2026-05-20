@@ -1,0 +1,534 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+safe-install: run dependency installs in a disposable OrbStack/Docker container.
+
+Usage:
+  safe-install init [--repo <path>] [--shell-rc <path>] [--claude-settings <path>] [--no-shell] [--no-git-hook] [--no-agents] [--no-start]
+  safe-install doctor
+  safe-install start
+  safe-install env
+  safe-install guard
+  safe-install install-git-hook [--repo <path>]
+  safe-install --pm pnpm -- install
+  safe-install --pm npm -- ci
+  safe-install --pm uv -- sync --locked
+  safe-install --pm pip -- install -r requirements.txt
+
+Options:
+  --pm <pnpm|npm|uv|pip>   Package manager to run.
+  --workdir <path>         Host project directory to mount. Defaults to $PWD.
+  --image <image>          Override container image.
+  --allow-scripts          Do not add npm/pnpm script-blocking flags.
+  --no-network             Run with --network none.
+  --readonly               Mount the project read-only.
+  --dry-run                Print docker command and exit.
+  -h, --help               Show this help.
+
+Defaults:
+  npm/pnpm install-like commands get --ignore-scripts unless --allow-scripts is set.
+  HOME inside the container is /tmp/safe-home.
+  Host credentials and dotfiles are not mounted.
+  Real installs auto-start OrbStack/Docker when possible.
+USAGE
+}
+
+safe_install_root() {
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  cd "$script_dir/.." && pwd
+}
+
+die() {
+  printf 'safe-install: %s\n' "$*" >&2
+  exit 2
+}
+
+docker_daemon_reachable() {
+  command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
+}
+
+wait_for_docker() {
+  local wait_seconds="${SAFE_INSTALL_DOCKER_WAIT_SECONDS:-45}"
+  local elapsed=0
+  while ((elapsed < wait_seconds)); do
+    if docker_daemon_reachable; then
+      return 0
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  return 1
+}
+
+start_runtime() {
+  if docker_daemon_reachable; then
+    printf 'safe-install: Docker daemon reachable\n'
+    return 0
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    printf 'safe-install: docker CLI missing; install OrbStack, Docker Desktop, Colima, or another Docker-compatible runtime\n' >&2
+    return 1
+  fi
+
+  if [[ "${SAFE_INSTALL_AUTO_START:-1}" == "0" ]]; then
+    printf 'safe-install: Docker daemon not reachable and auto-start disabled\n' >&2
+    return 1
+  fi
+
+  local os
+  os="$(uname -s 2>/dev/null || true)"
+  if [[ "$os" == "Darwin" ]]; then
+    if open -g -a OrbStack >/dev/null 2>&1; then
+      printf 'safe-install: starting OrbStack and waiting for Docker...\n' >&2
+      if wait_for_docker; then
+        printf 'safe-install: Docker daemon reachable\n'
+        return 0
+      fi
+    elif open -g -a Docker >/dev/null 2>&1; then
+      printf 'safe-install: starting Docker Desktop and waiting for Docker...\n' >&2
+      if wait_for_docker; then
+        printf 'safe-install: Docker daemon reachable\n'
+        return 0
+      fi
+    fi
+
+    printf 'safe-install: could not start OrbStack/Docker automatically; open your container runtime and retry\n' >&2
+    return 1
+  fi
+
+  printf 'safe-install: Docker daemon not reachable; start your Docker-compatible runtime and retry\n' >&2
+  return 1
+}
+
+print_env() {
+  local root
+  root="$(safe_install_root)"
+  printf 'export PATH=%q:"$PATH"\n' "$root/bin"
+  printf 'export SAFE_INSTALL_ACTIVE=1\n'
+}
+
+doctor() {
+  local expected
+  expected="$(safe_install_root)/bin"
+  printf 'safe-install doctor\n'
+  printf '  bin: %s\n' "$expected"
+
+  if command -v docker >/dev/null 2>&1; then
+    printf '  docker cli: %s\n' "$(command -v docker)"
+    if docker_daemon_reachable; then
+      printf '  docker daemon: reachable\n'
+    else
+      printf '  docker daemon: not reachable; run safe-install start\n'
+    fi
+  else
+    printf '  docker cli: missing\n'
+  fi
+
+  local tool path status
+  for tool in pnpm npm uv pip pip3; do
+    path="$(command -v "$tool" 2>/dev/null || true)"
+    if [[ "$path" == "$expected/$tool" ]]; then
+      status="protected"
+    elif [[ -n "$path" ]]; then
+      status="bypassing safe-install"
+    else
+      status="not found"
+    fi
+    printf '  %-5s %s %s\n' "$tool:" "$status" "${path:-}"
+  done
+}
+
+default_shell_rc() {
+  case "${SHELL:-}" in
+    */zsh) printf '%s/.zshrc\n' "$HOME" ;;
+    */bash) printf '%s/.bashrc\n' "$HOME" ;;
+    *) printf '%s/.profile\n' "$HOME" ;;
+  esac
+}
+
+install_shell_activation() {
+  local shell_rc="${1:-}"
+  local root line
+  root="$(safe_install_root)"
+  line="source $root/activate.sh"
+
+  if [[ -z "$shell_rc" ]]; then
+    shell_rc="$(default_shell_rc)"
+  fi
+
+  mkdir -p "$(dirname "$shell_rc")"
+  touch "$shell_rc"
+  if grep -Fqx "$line" "$shell_rc"; then
+    printf 'safe-install: shell already configured: %s\n' "$shell_rc"
+    return 0
+  fi
+
+  {
+    printf '\n# safe-install dependency isolation\n'
+    printf '%s\n' "$line"
+  } >> "$shell_rc"
+
+  printf 'safe-install: added activation to %s\n' "$shell_rc"
+}
+
+install_claude_env() {
+  local settings_path="${1:-}"
+  local root
+  root="$(safe_install_root)"
+
+  if [[ -z "$settings_path" ]]; then
+    settings_path="${SAFE_INSTALL_CLAUDE_SETTINGS:-${HOME}/.claude/settings.json}"
+  fi
+
+  if [[ ! -e "$settings_path" ]]; then
+    printf 'safe-install: Claude Code settings not found: %s\n' "$settings_path"
+    printf 'safe-install: open Claude Code once, then run: node %s/scripts/install-claude-env.js\n' "$root"
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    printf 'safe-install: skipped Claude Code env; node is not on PATH\n'
+    printf 'safe-install: after installing node, run: node %s/scripts/install-claude-env.js\n' "$root"
+    return 0
+  fi
+
+  if node "$root/scripts/install-claude-env.js" "$settings_path"; then
+    printf 'safe-install: restart Claude Code, then run safe-install doctor inside Claude\n'
+  else
+    printf 'safe-install: failed to update Claude Code settings: %s\n' "$settings_path" >&2
+  fi
+}
+
+active_on_path() {
+  local expected path
+  expected="$(safe_install_root)/bin"
+  path="$(command -v safe-install 2>/dev/null || true)"
+  [[ "$path" == "$expected/safe-install" ]]
+}
+
+guard() {
+  local changed
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    changed="$(git diff --cached --name-only -- \
+      package.json package-lock.json pnpm-lock.yaml yarn.lock bun.lock bun.lockb \
+      pyproject.toml uv.lock poetry.lock requirements.txt requirements-dev.txt 2>/dev/null || true)"
+  else
+    changed=""
+  fi
+
+  if [[ -z "$changed" ]]; then
+    printf 'safe-install guard: no staged dependency files\n'
+    return 0
+  fi
+
+  if ! active_on_path; then
+    printf 'safe-install guard: dependency files are staged, but safe-install is not first on PATH\n' >&2
+    printf 'Run: source %s/activate.sh\n' "$(safe_install_root)" >&2
+    return 1
+  fi
+
+  printf 'safe-install guard: protected dependency changes\n'
+  printf '%s\n' "$changed"
+}
+
+install_git_hook() {
+  local repo="$PWD"
+  while (($#)); do
+    case "$1" in
+      --repo)
+        shift
+        repo="${1:-}"
+        ;;
+      -h|--help)
+        printf 'Usage: safe-install install-git-hook [--repo <path>]\n'
+        return 0
+        ;;
+      *)
+        die "unknown install-git-hook option: $1"
+        ;;
+    esac
+    shift || true
+  done
+
+  [[ -d "$repo/.git" ]] || die "not a git repository: $repo"
+  local hook="$repo/.git/hooks/pre-commit"
+  local root
+  root="$(safe_install_root)"
+
+  if [[ -e "$hook" ]] && ! grep -q 'safe-install guard' "$hook"; then
+    die "pre-commit hook already exists and was not modified: $hook"
+  fi
+
+  cat > "$hook" <<HOOK
+#!/usr/bin/env sh
+export PATH="$root/bin:\$PATH"
+exec "$root/bin/safe-install" guard
+HOOK
+  chmod +x "$hook"
+  printf 'safe-install: installed pre-commit guard at %s\n' "$hook"
+}
+
+init_project() {
+  local repo="$PWD"
+  local shell_rc=""
+  local claude_settings=""
+  local do_shell=1
+  local do_git_hook=1
+  local do_agents=1
+  local do_start=1
+
+  while (($#)); do
+    case "$1" in
+      --repo)
+        shift
+        repo="${1:-}"
+        ;;
+      --shell-rc)
+        shift
+        shell_rc="${1:-}"
+        ;;
+      --claude-settings)
+        shift
+        claude_settings="${1:-}"
+        ;;
+      --no-shell)
+        do_shell=0
+        ;;
+      --no-git-hook)
+        do_git_hook=0
+        ;;
+      --no-agents)
+        do_agents=0
+        ;;
+      --no-start)
+        do_start=0
+        ;;
+      -h|--help)
+        printf 'Usage: safe-install init [--repo <path>] [--shell-rc <path>] [--claude-settings <path>] [--no-shell] [--no-git-hook] [--no-agents] [--no-start]\n'
+        return 0
+        ;;
+      *)
+        die "unknown init option: $1"
+        ;;
+    esac
+    shift || true
+  done
+
+  [[ -d "$repo" ]] || die "repo path does not exist: $repo"
+
+  printf 'safe-install init\n'
+  printf '  repo: %s\n' "$repo"
+
+  if ((do_shell == 1)); then
+    install_shell_activation "$shell_rc"
+  else
+    printf 'safe-install: skipped shell activation\n'
+  fi
+
+  if ((do_git_hook == 1)); then
+    if [[ -d "$repo/.git" ]]; then
+      install_git_hook --repo "$repo"
+    else
+      printf 'safe-install: skipped pre-commit guard; not a git repository: %s\n' "$repo"
+    fi
+  else
+    printf 'safe-install: skipped pre-commit guard\n'
+  fi
+
+  if ((do_agents == 1)); then
+    install_claude_env "$claude_settings"
+  else
+    printf 'safe-install: skipped coding-agent configuration\n'
+  fi
+
+  if ((do_start == 1)); then
+    start_runtime || true
+  else
+    printf 'safe-install: skipped runtime start\n'
+  fi
+
+  if active_on_path; then
+    printf 'safe-install: current shell protected\n'
+  else
+    printf 'safe-install: current shell not protected yet\n'
+    printf 'safe-install: run: source %s/activate.sh\n' "$(safe_install_root)"
+    printf 'safe-install: or open a new terminal after shell activation was installed\n'
+  fi
+}
+
+if [[ "${1:-}" == "init" ]]; then
+  shift
+  init_project "$@"
+  exit $?
+fi
+
+if [[ "${1:-}" == "doctor" ]]; then
+  doctor
+  exit 0
+fi
+
+if [[ "${1:-}" == "start" ]]; then
+  start_runtime
+  exit $?
+fi
+
+if [[ "${1:-}" == "env" ]]; then
+  print_env
+  exit 0
+fi
+
+if [[ "${1:-}" == "guard" ]]; then
+  guard
+  exit $?
+fi
+
+if [[ "${1:-}" == "install-git-hook" ]]; then
+  shift
+  install_git_hook "$@"
+  exit $?
+fi
+
+pm=""
+workdir="${SAFE_INSTALL_WORKDIR:-$PWD}"
+image=""
+allow_scripts=0
+no_network="${SAFE_INSTALL_NO_NETWORK:-0}"
+readonly_mount="${SAFE_INSTALL_READONLY:-0}"
+dry_run=0
+if [[ "${SAFE_INSTALL_DRY_RUN:-0}" == "1" ]]; then
+  dry_run=1
+fi
+
+while (($#)); do
+  case "$1" in
+    --pm)
+      shift
+      pm="${1:-}"
+      ;;
+    --workdir)
+      shift
+      workdir="${1:-}"
+      ;;
+    --image)
+      shift
+      image="${1:-}"
+      ;;
+    --allow-scripts)
+      allow_scripts=1
+      ;;
+    --no-network)
+      no_network=1
+      ;;
+    --readonly)
+      readonly_mount=1
+      ;;
+    --dry-run)
+      dry_run=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      die "unknown option: $1"
+      ;;
+  esac
+  shift || true
+done
+
+[[ -n "$pm" ]] || die "--pm is required"
+(($# > 0)) || die "package-manager arguments are required after --"
+[[ -d "$workdir" ]] || die "workdir does not exist: $workdir"
+
+if ! command -v docker >/dev/null 2>&1; then
+  die "docker CLI not found. Start OrbStack and make sure docker is on PATH."
+fi
+
+if ((dry_run == 0)); then
+  start_runtime
+fi
+
+case "$pm" in
+  pnpm)
+    image="${image:-node:22-bookworm}"
+    container_prefix='corepack enable >/dev/null 2>&1 || true; exec corepack pnpm'
+    ;;
+  npm)
+    image="${image:-node:22-bookworm}"
+    container_prefix='exec npm'
+    ;;
+  uv)
+    image="${image:-ghcr.io/astral-sh/uv:python3.12-bookworm}"
+    container_prefix='exec uv'
+    ;;
+  pip)
+    image="${image:-python:3.12-bookworm}"
+    container_prefix='exec python -m pip'
+    ;;
+  *)
+    die "unsupported package manager: $pm"
+    ;;
+esac
+
+args=("$@")
+subcommand="${args[0]}"
+
+if ((allow_scripts == 0)); then
+  case "$pm:$subcommand" in
+    pnpm:install|pnpm:i|pnpm:add|pnpm:update|pnpm:up|pnpm:import)
+      args+=(--ignore-scripts)
+      ;;
+    npm:install|npm:i|npm:ci|npm:update|npm:up)
+      args+=(--ignore-scripts)
+      ;;
+  esac
+fi
+
+mount_spec="type=bind,src=${workdir},dst=/work"
+if ((readonly_mount == 1)); then
+  mount_spec="${mount_spec},readonly"
+fi
+
+docker_args=(
+  run --rm
+  --name "safe-install-${pm}-$$"
+  --cap-drop=ALL
+  --security-opt no-new-privileges
+  --pids-limit=512
+  --memory "${SAFE_INSTALL_MEMORY:-2g}"
+  --cpus "${SAFE_INSTALL_CPUS:-2}"
+  --tmpfs "/tmp:rw,nosuid,size=${SAFE_INSTALL_TMPFS_SIZE:-512m}"
+  --env HOME=/tmp/safe-home
+  --env npm_config_fund=false
+  --env npm_config_audit=false
+  --mount "$mount_spec"
+  --workdir /work
+)
+
+if [[ -t 0 && -t 1 ]]; then
+  docker_args+=(-it)
+fi
+
+if ((no_network == 1)); then
+  docker_args+=(--network none)
+fi
+
+printf -v quoted_args '%q ' "${args[@]}"
+docker_args+=("$image" bash -lc "${container_prefix} ${quoted_args}")
+
+if ((dry_run == 1)); then
+  printf 'docker'
+  printf ' %q' "${docker_args[@]}"
+  printf '\n'
+  exit 0
+fi
+
+exec docker "${docker_args[@]}"

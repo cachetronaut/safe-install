@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cmd="${1:-}"
+
+if [[ "${SAFE_INSTALL_BYPASS:-0}" == "1" ]]; then
+  cmd="__pass_through__"
+fi
+
+case "$cmd" in
+  install|wheel|download)
+    exec safe-install --pm pip -- "$@"
+    ;;
+esac
+
+shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IFS=':' read -r -a path_parts <<< "$PATH"
+for dir in "${path_parts[@]}"; do
+  [[ "$dir" == "$shim_dir" ]] && continue
+  if [[ -x "$dir/pip3" ]]; then
+    exec "$dir/pip3" "$@"
+  fi
+done
+
+printf 'pip3 wrapper: real pip3 not found on PATH\n' >&2
+exit 127
