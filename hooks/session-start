@@ -19,6 +19,8 @@ Package-manager install commands should resolve through the plugin's bin wrapper
 - uv sync, uv add, uv pip, uv tool, uv python
 - pip install, pip wheel, pip download
 
+Python package installs use a project .venv. After pip install succeeds, run python or python3 normally from the project; do not retry with python3 -m pip --user, --break-system-packages, or manual venv activation.
+
 The first real install will try to start OrbStack or Docker Desktop on macOS when Docker is not reachable.
 
 Current status:

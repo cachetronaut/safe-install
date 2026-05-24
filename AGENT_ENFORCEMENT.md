@@ -102,6 +102,8 @@ SAFE_INSTALL_DRY_RUN=1 uv pip install pytest
 SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 ```
 
+For Python package work, `pip install ...` creates or reuses `.venv` in the current project. Later `python` and `python3` calls automatically use that virtualenv through the safe-install shims, so agents should not retry with `python3 -m pip --user`, `--break-system-packages`, or a manually activated venv.
+
 ## Bypass
 
 For a single command:

@@ -46,6 +46,29 @@ die() {
   exit 2
 }
 
+physical_path() {
+  local path="$1"
+  local dir base
+  dir="$(dirname "$path")"
+  base="$(basename "$path")"
+  if [[ -d "$dir" ]]; then
+    printf '%s/%s\n' "$(cd "$dir" && pwd -P)" "$base"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
+same_path() {
+  local left right
+  left="$(physical_path "$1")"
+  right="$(physical_path "$2")"
+  if [[ "$(uname -s 2>/dev/null || true)" == "Darwin" ]]; then
+    left="$(printf '%s' "$left" | tr '[:upper:]' '[:lower:]')"
+    right="$(printf '%s' "$right" | tr '[:upper:]' '[:lower:]')"
+  fi
+  [[ "$left" == "$right" ]]
+}
+
 docker_daemon_reachable() {
   command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
 }
@@ -129,9 +152,9 @@ doctor() {
   fi
 
   local tool path status
-  for tool in pnpm npm uv pip pip3; do
+  for tool in pnpm npm uv pip pip3 python python3; do
     path="$(command -v "$tool" 2>/dev/null || true)"
-    if [[ "$path" == "$expected/$tool" ]]; then
+    if [[ -n "$path" ]] && same_path "$path" "$expected/$tool"; then
       status="protected"
     elif [[ -n "$path" ]]; then
       status="bypassing safe-install"
@@ -207,7 +230,7 @@ active_on_path() {
   local expected path
   expected="$(safe_install_root)/bin"
   path="$(command -v safe-install 2>/dev/null || true)"
-  [[ "$path" == "$expected/safe-install" ]]
+  [[ -n "$path" ]] && same_path "$path" "$expected/safe-install"
 }
 
 guard() {
@@ -270,6 +293,60 @@ exec "$root/bin/safe-install" guard
 HOOK
   chmod +x "$hook"
   printf 'safe-install: installed pre-commit guard at %s\n' "$hook"
+}
+
+find_real_tool() {
+  local tool="$1"
+  local root shim_dir dir
+  root="$(safe_install_root)"
+  shim_dir="$root/bin"
+
+  IFS=':' read -r -a path_parts <<< "$PATH"
+  for dir in "${path_parts[@]}"; do
+    same_path "$dir" "$shim_dir" && continue
+    if [[ -x "$dir/$tool" ]]; then
+      printf '%s/%s\n' "$dir" "$tool"
+      return 0
+    fi
+  done
+  return 1
+}
+
+project_venv_dir() {
+  printf '%s\n' "${SAFE_INSTALL_PYTHON_VENV:-$workdir/.venv}"
+}
+
+host_python() {
+  if [[ -n "${SAFE_INSTALL_PYTHON:-}" ]]; then
+    [[ -x "$SAFE_INSTALL_PYTHON" ]] || die "SAFE_INSTALL_PYTHON is not executable: $SAFE_INSTALL_PYTHON"
+    printf '%s\n' "$SAFE_INSTALL_PYTHON"
+    return 0
+  fi
+
+  find_real_tool python3 || find_real_tool python || die "host python not found on PATH"
+}
+
+run_pip_install_in_project_venv() {
+  local venv python venv_python
+  venv="$(project_venv_dir)"
+
+  if ((dry_run == 1)); then
+    printf 'safe-install python-venv %q -m venv %q && %q -m pip' "$(host_python)" "$venv" "$venv/bin/python"
+    printf ' %q' "$@"
+    printf '\n'
+    return 0
+  fi
+
+  python="$(host_python)"
+  if [[ ! -x "$venv/bin/python" ]]; then
+    printf 'safe-install: creating Python virtualenv: %s\n' "$venv" >&2
+    SAFE_INSTALL_BYPASS=1 "$python" -m venv "$venv"
+  fi
+
+  venv_python="$venv/bin/python"
+  printf 'safe-install: installing into Python virtualenv: %s\n' "$venv" >&2
+  PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 SAFE_INSTALL_BYPASS=1 "$venv_python" -m pip "$@"
+  printf 'safe-install: Python commands in this project now use %s through safe-install python shims\n' "$venv" >&2
 }
 
 init_project() {
@@ -447,6 +524,11 @@ done
 [[ -n "$pm" ]] || die "--pm is required"
 (($# > 0)) || die "package-manager arguments are required after --"
 [[ -d "$workdir" ]] || die "workdir does not exist: $workdir"
+
+if [[ "$pm" == "pip" && "${1:-}" == "install" && "${SAFE_INSTALL_PYTHON_CONTAINER:-0}" != "1" ]]; then
+  run_pip_install_in_project_venv "$@"
+  exit $?
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   die "docker CLI not found. Start OrbStack and make sure docker is on PATH."

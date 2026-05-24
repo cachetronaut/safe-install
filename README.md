@@ -15,6 +15,7 @@ By default, install commands run with:
 - dropped Linux capabilities
 - `no-new-privileges`
 - npm/pnpm lifecycle scripts disabled unless explicitly allowed
+- Python `pip install` commands install into a project `.venv` and the `python`/`python3` shims auto-use that environment from inside the project
 
 ## Install
 
@@ -74,6 +75,7 @@ pnpm: protected
 npm: protected
 uv: protected
 pip3: protected
+python3: protected
 ```
 
 If you already cloned the repo locally, run:
@@ -106,6 +108,8 @@ pip install -r requirements.txt
 
 The wrappers intercept install-like operations and run them in the container. Other commands pass through to the real host package manager.
 
+Python is the exception for local usability: bare `pip install ...` creates or reuses `.venv` in the current project, installs there with the host Python, and subsequent `python` or `python3` commands automatically use that `.venv` through the safe-install shims. This avoids disappearing container-only installs and macOS externally-managed Python failures.
+
 ## Direct Use
 
 ```sh
@@ -120,6 +124,7 @@ Preview without running Docker:
 ```sh
 SAFE_INSTALL_DRY_RUN=1 pnpm install
 safe-install --pm pnpm --dry-run -- install
+SAFE_INSTALL_DRY_RUN=1 pip install pdfplumber
 ```
 
 Run without network for already-downloaded material:
@@ -184,6 +189,7 @@ PATH=/path/to/safe-install/bin:$PATH
 - `npm`: `install`, `i`, `ci`, `update`, `up`, `exec`, `x`, `init`
 - `uv`: `sync`, `add`, `pip`, `tool`, `python`
 - `pip` and `pip3`: `install`, `wheel`, `download`
+- `python` and `python3`: auto-dispatch to a project `.venv` when one exists, otherwise pass through
 
 Bypass is explicit:
 
@@ -218,6 +224,8 @@ Future backends should preserve the same policy contract:
 - optional network isolation
 - package-manager-specific lifecycle-script controls
 - `safe-install doctor` visibility
+
+Python virtualenv management is intentionally host-side because Linux container virtualenvs and compiled wheels are not generally executable on macOS hosts. Use `SAFE_INSTALL_PYTHON_CONTAINER=1 pip install ...` only when you explicitly want the previous disposable-container behavior.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 

@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash -n "$repo_root/bin/safe-install" "$repo_root/bin/pnpm" "$repo_root/bin/npm" \
   "$repo_root/bin/uv" "$repo_root/bin/pip" "$repo_root/bin/pip3" \
+  "$repo_root/bin/python" "$repo_root/bin/python3" \
   "$repo_root/scripts/install-shell.sh" "$repo_root/install.sh" \
   "$repo_root/hooks/run-hook.cmd" "$repo_root/hooks/session-start"
 
@@ -19,6 +20,7 @@ python3 -m json.tool "$repo_root/hooks/hooks-cursor.json" >/dev/null
 pnpm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm install)"
 npm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npm ci)"
 uv_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv sync --locked)"
+pip_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt)"
 doctor="$(PATH="$repo_root/bin:$PATH" safe-install doctor)"
 env_out="$("$repo_root/bin/safe-install" env)"
 hook_out="$(CLAUDE_PLUGIN_ROOT="$repo_root" "$repo_root/hooks/run-hook.cmd" session-start)"
@@ -47,6 +49,8 @@ grep -q 'ghcr.io/astral-sh/uv' <<< "$uv_dry"
 grep -q -- '--memory 2g' <<< "$pnpm_dry"
 grep -q -- '--cpus 2' <<< "$pnpm_dry"
 grep -q -- 'size=512m' <<< "$pnpm_dry"
+grep -q -- 'safe-install python-venv' <<< "$pip_dry"
+grep -q -- '.venv/bin/python' <<< "$pip_dry"
 [[ "$bash_activate" == "$repo_root/bin/safe-install" ]]
 [[ "$zsh_activate" == "$repo_root/bin/safe-install" ]]
 grep -q 'pnpm: protected' <<< "$doctor"
@@ -71,5 +75,16 @@ grep -q 'safe-install is installed' <<< "$installer_out"
 grep -q 'source "' <<< "$installer_out"
 test -x "$tmp_dir/home/.local/share/safe-install/bin/safe-install"
 test -x "$tmp_dir/project/.git/hooks/pre-commit"
+
+mkdir -p "$tmp_dir/python-project"
+touch "$tmp_dir/python-project/requirements.txt"
+(
+  cd "$tmp_dir/python-project"
+  PATH="$repo_root/bin:$PATH" pip install -r requirements.txt >/dev/null
+  venv_prefix="$(PATH="$repo_root/bin:$PATH" python3 -c 'import sys; print(sys.prefix)')"
+  expected_prefix="$(cd "$tmp_dir/python-project/.venv" && pwd -P)"
+  actual_prefix="$(cd "$venv_prefix" && pwd -P)"
+  [[ "$actual_prefix" == "$expected_prefix" ]]
+)
 
 printf 'safe-install smoke tests passed\n'

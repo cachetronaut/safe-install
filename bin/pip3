@@ -13,6 +13,28 @@ case "$cmd" in
     ;;
 esac
 
+find_project_venv_pip() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -x "$dir/.venv/bin/$tool" ]]; then
+      printf '%s\n' "$dir/.venv/bin/$tool"
+      return 0
+    fi
+    if [[ -x "$dir/.venv/bin/pip" ]]; then
+      printf '%s\n' "$dir/.venv/bin/pip"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+if [[ "${SAFE_INSTALL_BYPASS:-0}" != "1" ]]; then
+  if venv_pip="$(find_project_venv_pip)"; then
+    exec "$venv_pip" "$@"
+  fi
+fi
+
 shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IFS=':' read -r -a path_parts <<< "$PATH"
 for dir in "${path_parts[@]}"; do

@@ -9,6 +9,7 @@
 - Intercept common package-manager install commands through PATH shims.
 - Keep normal workflows low-friction enough that users do not bypass the tool.
 - Make bypasses explicit and auditable.
+- Keep Python installs out of the system interpreter by using a project virtualenv.
 
 ## Non-Goals
 
@@ -16,6 +17,7 @@
 - It does not make a malicious package safe if the mounted project contains secrets.
 - It does not stop commands that use absolute package-manager paths.
 - It does not replace endpoint protection, secret scanning, signed releases, or locked dependency review.
+- Python virtualenv installs run with the host interpreter so installed packages are executable on the host; this is usability isolation, not a malware sandbox.
 
 ## Reporting
 

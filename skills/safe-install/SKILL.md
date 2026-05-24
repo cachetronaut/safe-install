@@ -25,7 +25,7 @@ SAFE_INSTALL_DRY_RUN=1 uv sync --locked
 SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 ```
 
-The output should be a `docker run ...` command with a project-only mount and `HOME=/tmp/safe-home`.
+The npm, pnpm, and uv output should be a `docker run ...` command with a project-only mount and `HOME=/tmp/safe-home`. `pip install ...` should show the project `.venv` path because Python installs need a host-executable virtualenv.
 
 ## Initialization
 
@@ -47,3 +47,4 @@ safe-install init
 - Use `SAFE_INSTALL_DRY_RUN=1` before a real install when troubleshooting.
 - If Docker is not reachable on macOS, `safe-install` will try to start OrbStack or Docker Desktop during the real install.
 - Keep secrets out of project directories because the project directory is mounted into the container.
+- After `pip install ...`, run Python with `python` or `python3` normally; the shims auto-use `.venv` from inside the project.
