@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+tool="$(basename "$0")"
 cmd="${1:-}"
 
 if [[ "${SAFE_INSTALL_BYPASS:-0}" == "1" ]]; then

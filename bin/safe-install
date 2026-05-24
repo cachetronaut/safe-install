@@ -152,7 +152,7 @@ doctor() {
   fi
 
   local tool path status
-  for tool in pnpm npm uv pip pip3 python python3; do
+  for tool in pnpm pnpx npm npx uv pip pip3 python python3; do
     path="$(command -v "$tool" 2>/dev/null || true)"
     if [[ -n "$path" ]] && same_path "$path" "$expected/$tool"; then
       status="protected"

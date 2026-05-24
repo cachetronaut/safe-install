@@ -9,7 +9,7 @@ if [[ "${SAFE_INSTALL_BYPASS:-0}" == "1" ]]; then
 fi
 
 case "$cmd" in
-  sync|add|pip|tool|python)
+  sync|add|pip|tool|python|run)
     exec safe-install --pm "$tool" -- "$@"
     ;;
 esac

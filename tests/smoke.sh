@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash -n "$repo_root/bin/safe-install" "$repo_root/bin/pnpm" "$repo_root/bin/npm" \
+  "$repo_root/bin/npx" "$repo_root/bin/pnpx" \
   "$repo_root/bin/uv" "$repo_root/bin/pip" "$repo_root/bin/pip3" \
   "$repo_root/bin/python" "$repo_root/bin/python3" \
   "$repo_root/scripts/install-shell.sh" "$repo_root/install.sh" \
@@ -18,8 +19,12 @@ python3 -m json.tool "$repo_root/hooks/hooks.json" >/dev/null
 python3 -m json.tool "$repo_root/hooks/hooks-cursor.json" >/dev/null
 
 pnpm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm install)"
+pnpm_exec_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version)"
+pnpx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpx cowsay hi)"
 npm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npm ci)"
+npx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npx prettier --version)"
 uv_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv sync --locked)"
+uv_run_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv run python --version)"
 pip_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt)"
 doctor="$(PATH="$repo_root/bin:$PATH" safe-install doctor)"
 env_out="$("$repo_root/bin/safe-install" env)"
@@ -44,8 +49,16 @@ printf '{"env":{"EXISTING":"1"}}\n' > "$tmp_dir/claude/settings.json"
 init_out="$(PATH="$repo_root/bin:$PATH" "$repo_root/bin/safe-install" init --repo "$tmp_dir/repo" --shell-rc "$tmp_dir/zshrc" --claude-settings "$tmp_dir/claude/settings.json" --no-start)"
 
 grep -q -- '--ignore-scripts' <<< "$pnpm_dry"
+grep -q -- 'safe-install-pnpm' <<< "$pnpm_exec_dry"
+grep -q -- 'vite' <<< "$pnpm_exec_dry"
+grep -q -- 'safe-install-pnpm' <<< "$pnpx_dry"
+grep -q -- 'cowsay' <<< "$pnpx_dry"
 grep -q -- '--ignore-scripts' <<< "$npm_dry"
+grep -q -- 'safe-install-npm' <<< "$npx_dry"
+grep -q -- 'prettier' <<< "$npx_dry"
 grep -q 'ghcr.io/astral-sh/uv' <<< "$uv_dry"
+grep -q -- 'safe-install-uv' <<< "$uv_run_dry"
+grep -q -- 'python' <<< "$uv_run_dry"
 grep -q -- '--memory 2g' <<< "$pnpm_dry"
 grep -q -- '--cpus 2' <<< "$pnpm_dry"
 grep -q -- 'size=512m' <<< "$pnpm_dry"
@@ -54,6 +67,10 @@ grep -q -- '.venv/bin/python' <<< "$pip_dry"
 [[ "$bash_activate" == "$repo_root/bin/safe-install" ]]
 [[ "$zsh_activate" == "$repo_root/bin/safe-install" ]]
 grep -q 'pnpm: protected' <<< "$doctor"
+grep -q 'pnpx: protected' <<< "$doctor"
+grep -q 'npx:  protected' <<< "$doctor"
+grep -q 'uv:   protected' <<< "$doctor"
+grep -q 'python3: protected' <<< "$doctor"
 grep -q 'export SAFE_INSTALL_ACTIVE=1' <<< "$env_out"
 grep -q 'safe-install: added activation' <<< "$init_out"
 grep -q 'safe-install: installed pre-commit guard' <<< "$init_out"

@@ -73,6 +73,7 @@ Expected:
 ```txt
 pnpm: protected
 npm: protected
+npx: protected
 uv: protected
 pip3: protected
 python3: protected
@@ -110,6 +111,16 @@ The wrappers intercept install-like operations and run them in the container. Ot
 
 Python is the exception for local usability: bare `pip install ...` creates or reuses `.venv` in the current project, installs there with the host Python, and subsequent `python` or `python3` commands automatically use that `.venv` through the safe-install shims. This avoids disappearing container-only installs and macOS externally-managed Python failures.
 
+For packages that expose command-line tools, use the protected ecosystem launchers instead of guessing host paths:
+
+```sh
+pnpm exec <command>
+pnpm dlx <package>
+npx <package>
+uv run <command>
+uv tool run <tool>
+```
+
 ## Direct Use
 
 ```sh
@@ -123,6 +134,9 @@ Preview without running Docker:
 
 ```sh
 SAFE_INSTALL_DRY_RUN=1 pnpm install
+SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
+SAFE_INSTALL_DRY_RUN=1 npx prettier --version
+SAFE_INSTALL_DRY_RUN=1 uv run python --version
 safe-install --pm pnpm --dry-run -- install
 SAFE_INSTALL_DRY_RUN=1 pip install pdfplumber
 ```
@@ -185,9 +199,11 @@ PATH=/path/to/safe-install/bin:$PATH
 
 ## Wrapped Commands
 
-- `pnpm`: `install`, `i`, `add`, `update`, `up`, `import`, `dlx`
+- `pnpm`: `install`, `i`, `add`, `update`, `up`, `import`, `dlx`, `exec`, `run`, `create`
+- `pnpx`: package execution through `pnpm dlx`
 - `npm`: `install`, `i`, `ci`, `update`, `up`, `exec`, `x`, `init`
-- `uv`: `sync`, `add`, `pip`, `tool`, `python`
+- `npx`: package execution through `npm exec`
+- `uv`: `sync`, `add`, `pip`, `tool`, `python`, `run`
 - `pip` and `pip3`: `install`, `wheel`, `download`
 - `python` and `python3`: auto-dispatch to a project `.venv` when one exists, otherwise pass through
 
