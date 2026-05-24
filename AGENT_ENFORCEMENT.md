@@ -99,13 +99,15 @@ SAFE_INSTALL_DRY_RUN=1 pnpm install
 SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
 SAFE_INSTALL_DRY_RUN=1 npm ci
 SAFE_INSTALL_DRY_RUN=1 npx prettier --version
+SAFE_INSTALL_DRY_RUN=1 bun install
+SAFE_INSTALL_DRY_RUN=1 bunx cowsay hi
 SAFE_INSTALL_DRY_RUN=1 uv sync --locked
 SAFE_INSTALL_DRY_RUN=1 uv run python --version
 SAFE_INSTALL_DRY_RUN=1 uv pip install pytest
 SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 ```
 
-For Node and uv package executables, use the protected ecosystem launcher instead of host paths or direct `node_modules/.bin` guesses: `pnpm exec`, `pnpm dlx`, `npx`, `uv run`, or `uv tool run`.
+For Node, Bun, and uv package executables, use the protected ecosystem launcher instead of host paths or direct `node_modules/.bin` guesses: `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`.
 
 For Python package work, `pip install ...` creates or reuses `.venv` in the current project. Later `python` and `python3` calls automatically use that virtualenv through the safe-install shims, so agents should not retry with `python3 -m pip --user`, `--break-system-packages`, or a manually activated venv.
 

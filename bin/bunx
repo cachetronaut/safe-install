@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SAFE_INSTALL_BYPASS:-0}" != "1" ]]; then
+  exec safe-install --pm bun -- x "$@"
+fi
+
+shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IFS=':' read -r -a path_parts <<< "$PATH"
+for dir in "${path_parts[@]}"; do
+  [[ "$dir" == "$shim_dir" ]] && continue
+  if [[ -x "$dir/bunx" ]]; then
+    exec "$dir/bunx" "$@"
+  fi
+done
+
+printf 'bunx wrapper: real bunx not found on PATH\n' >&2
+exit 127

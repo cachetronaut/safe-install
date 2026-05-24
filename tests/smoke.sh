@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash -n "$repo_root/bin/safe-install" "$repo_root/bin/pnpm" "$repo_root/bin/npm" \
   "$repo_root/bin/npx" "$repo_root/bin/pnpx" \
+  "$repo_root/bin/bun" "$repo_root/bin/bunx" \
   "$repo_root/bin/uv" "$repo_root/bin/pip" "$repo_root/bin/pip3" \
   "$repo_root/bin/python" "$repo_root/bin/python3" \
   "$repo_root/scripts/install-shell.sh" "$repo_root/install.sh" \
@@ -23,6 +24,8 @@ pnpm_exec_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm exec vi
 pnpx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpx cowsay hi)"
 npm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npm ci)"
 npx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npx prettier --version)"
+bun_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 bun install)"
+bunx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 bunx cowsay hi)"
 uv_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv sync --locked)"
 uv_run_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv run python --version)"
 pip_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt)"
@@ -56,6 +59,10 @@ grep -q -- 'cowsay' <<< "$pnpx_dry"
 grep -q -- '--ignore-scripts' <<< "$npm_dry"
 grep -q -- 'safe-install-npm' <<< "$npx_dry"
 grep -q -- 'prettier' <<< "$npx_dry"
+grep -q -- 'oven/bun:1' <<< "$bun_dry"
+grep -q -- '--ignore-scripts' <<< "$bun_dry"
+grep -q -- 'safe-install-bun' <<< "$bunx_dry"
+grep -q -- 'cowsay' <<< "$bunx_dry"
 grep -q 'ghcr.io/astral-sh/uv' <<< "$uv_dry"
 grep -q -- 'safe-install-uv' <<< "$uv_run_dry"
 grep -q -- 'python' <<< "$uv_run_dry"
@@ -69,6 +76,8 @@ grep -q -- '.venv/bin/python' <<< "$pip_dry"
 grep -q 'pnpm: protected' <<< "$doctor"
 grep -q 'pnpx: protected' <<< "$doctor"
 grep -q 'npx:  protected' <<< "$doctor"
+grep -q 'bun:  protected' <<< "$doctor"
+grep -q 'bunx: protected' <<< "$doctor"
 grep -q 'uv:   protected' <<< "$doctor"
 grep -q 'python3: protected' <<< "$doctor"
 grep -q 'export SAFE_INSTALL_ACTIVE=1' <<< "$env_out"

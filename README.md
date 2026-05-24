@@ -74,6 +74,7 @@ Expected:
 pnpm: protected
 npm: protected
 npx: protected
+bun: protected
 uv: protected
 pip3: protected
 python3: protected
@@ -102,6 +103,7 @@ Use your usual commands:
 ```sh
 pnpm install
 npm ci
+bun install
 uv sync --locked
 uv pip install pytest
 pip install -r requirements.txt
@@ -117,6 +119,8 @@ For packages that expose command-line tools, use the protected ecosystem launche
 pnpm exec <command>
 pnpm dlx <package>
 npx <package>
+bunx <package>
+bun run <command>
 uv run <command>
 uv tool run <tool>
 ```
@@ -126,6 +130,7 @@ uv tool run <tool>
 ```sh
 safe-install --pm pnpm -- install
 safe-install --pm npm -- ci
+safe-install --pm bun -- install
 safe-install --pm uv -- sync --locked
 safe-install --pm pip -- install -r requirements.txt
 ```
@@ -136,6 +141,8 @@ Preview without running Docker:
 SAFE_INSTALL_DRY_RUN=1 pnpm install
 SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
 SAFE_INSTALL_DRY_RUN=1 npx prettier --version
+SAFE_INSTALL_DRY_RUN=1 bun install
+SAFE_INSTALL_DRY_RUN=1 bunx cowsay hi
 SAFE_INSTALL_DRY_RUN=1 uv run python --version
 safe-install --pm pnpm --dry-run -- install
 SAFE_INSTALL_DRY_RUN=1 pip install pdfplumber
@@ -147,10 +154,11 @@ Run without network for already-downloaded material:
 safe-install --pm pnpm --no-network --readonly -- install
 ```
 
-Allow npm/pnpm lifecycle scripts only when you trust the dependency tree:
+Allow npm/pnpm/bun lifecycle scripts only when you trust the dependency tree:
 
 ```sh
 safe-install --pm pnpm --allow-scripts -- install
+safe-install --pm bun --allow-scripts -- install
 ```
 
 ## Agent Enforcement
@@ -203,6 +211,8 @@ PATH=/path/to/safe-install/bin:$PATH
 - `pnpx`: package execution through `pnpm dlx`
 - `npm`: `install`, `i`, `ci`, `update`, `up`, `exec`, `x`, `init`
 - `npx`: package execution through `npm exec`
+- `bun`: `install`, `i`, `add`, `remove`, `rm`, `update`, `up`, `run`, `x`, `create`, `init`
+- `bunx`: package execution through `bun x`
 - `uv`: `sync`, `add`, `pip`, `tool`, `python`, `run`
 - `pip` and `pip3`: `install`, `wheel`, `download`
 - `python` and `python3`: auto-dispatch to a project `.venv` when one exists, otherwise pass through

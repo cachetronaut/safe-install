@@ -14,11 +14,12 @@ Usage:
   safe-install install-git-hook [--repo <path>]
   safe-install --pm pnpm -- install
   safe-install --pm npm -- ci
+  safe-install --pm bun -- install
   safe-install --pm uv -- sync --locked
   safe-install --pm pip -- install -r requirements.txt
 
 Options:
-  --pm <pnpm|npm|uv|pip>   Package manager to run.
+  --pm <pnpm|npm|bun|uv|pip>   Package manager to run.
   --workdir <path>         Host project directory to mount. Defaults to $PWD.
   --image <image>          Override container image.
   --allow-scripts          Do not add npm/pnpm script-blocking flags.
@@ -28,7 +29,7 @@ Options:
   -h, --help               Show this help.
 
 Defaults:
-  npm/pnpm install-like commands get --ignore-scripts unless --allow-scripts is set.
+  npm/pnpm/bun install-like commands get --ignore-scripts unless --allow-scripts is set.
   HOME inside the container is /tmp/safe-home.
   Host credentials and dotfiles are not mounted.
   Real installs auto-start OrbStack/Docker when possible.
@@ -152,7 +153,7 @@ doctor() {
   fi
 
   local tool path status
-  for tool in pnpm pnpx npm npx uv pip pip3 python python3; do
+  for tool in pnpm pnpx npm npx bun bunx uv pip pip3 python python3; do
     path="$(command -v "$tool" 2>/dev/null || true)"
     if [[ -n "$path" ]] && same_path "$path" "$expected/$tool"; then
       status="protected"
@@ -547,6 +548,10 @@ case "$pm" in
     image="${image:-node:22-bookworm}"
     container_prefix='exec npm'
     ;;
+  bun)
+    image="${image:-oven/bun:1}"
+    container_prefix='exec bun'
+    ;;
   uv)
     image="${image:-ghcr.io/astral-sh/uv:python3.12-bookworm}"
     container_prefix='exec uv'
@@ -569,6 +574,9 @@ if ((allow_scripts == 0)); then
       args+=(--ignore-scripts)
       ;;
     npm:install|npm:i|npm:ci|npm:update|npm:up)
+      args+=(--ignore-scripts)
+      ;;
+    bun:install|bun:i|bun:add|bun:update|bun:up)
       args+=(--ignore-scripts)
       ;;
   esac
