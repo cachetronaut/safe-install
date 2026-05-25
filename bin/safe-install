@@ -612,7 +612,12 @@ docker_args=(
 )
 
 if [[ "$pm" == "uv" ]]; then
-  docker_args+=(--mount "type=volume,dst=/work/.venv")
+  docker_args+=(
+    --env UV_CACHE_DIR=/safe-install/uv-cache
+    --env UV_PYTHON_INSTALL_DIR=/safe-install/uv-python
+    --mount "type=volume,dst=/safe-install"
+    --mount "type=volume,dst=/work/.venv"
+  )
 fi
 
 if [[ -t 0 && -t 1 ]]; then

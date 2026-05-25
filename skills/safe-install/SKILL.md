@@ -32,7 +32,7 @@ SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 
 The npm, pnpm, bun, and uv output should be a `docker run ...` command with a project-only mount and `HOME=/tmp/safe-home`. `pip install ...` should show the project `.venv` path because Python installs need a host-executable virtualenv.
 
-The uv dry run should use the generic Debian uv image and hide `/work/.venv` with a container-local volume so newer supported project Python versions are not blocked by the wrapper image's Python minor version.
+The uv dry run should use the generic Debian uv image, hide `/work/.venv` with a container-local volume, and set uv's Python/cache directories under `/safe-install` so downloaded interpreters are executable inside the container.
 
 ## Initialization
 
