@@ -284,12 +284,13 @@ install_git_hook() {
   local root
   root="$(safe_install_root)"
 
-  if [[ -e "$hook" ]] && ! grep -q 'safe-install guard' "$hook"; then
+  if [[ -e "$hook" ]] && ! grep -Eq 'safe-install(.*)? guard' "$hook"; then
     die "pre-commit hook already exists and was not modified: $hook"
   fi
 
   cat > "$hook" <<HOOK
 #!/usr/bin/env sh
+# safe-install guard
 export PATH="$root/bin:\$PATH"
 exec "$root/bin/safe-install" guard
 HOOK
