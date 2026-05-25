@@ -20,6 +20,8 @@ Package-manager install commands should resolve through the plugin's bin wrapper
 - uv sync, uv add, uv pip, uv tool, uv python, uv run
 - pip install, pip wheel, pip download
 
+If this is an already-open Codex or coding-agent shell after safe-install was installed or updated, run eval \"\$(safe-install reload)\" and then safe-install doctor before dependency work.
+
 For Node, Bun, and uv package executables, use pnpm exec, pnpm dlx, npx, bun run, bunx, uv run, or uv tool run instead of host paths or direct node_modules/.bin guesses.
 
 For uv project work, keep the project's declared Python constraint intact. The wrapper uses a generic uv image and a container-local .venv, so do not downgrade requires-python or similar project metadata just to match the wrapper image.

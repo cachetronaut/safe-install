@@ -31,6 +31,7 @@ uv_run_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 uv run python -
 pip_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt)"
 doctor="$(PATH="$repo_root/bin:$PATH" safe-install doctor)"
 env_out="$("$repo_root/bin/safe-install" env)"
+reload_out="$("$repo_root/bin/safe-install" reload)"
 hook_out="$(CLAUDE_PLUGIN_ROOT="$repo_root" "$repo_root/hooks/run-hook.cmd" session-start)"
 HOOK_OUT="$hook_out" python3 - <<'PY'
 import json
@@ -83,6 +84,8 @@ grep -q 'bunx: protected' <<< "$doctor"
 grep -q 'uv:   protected' <<< "$doctor"
 grep -q 'python3: protected' <<< "$doctor"
 grep -q 'export SAFE_INSTALL_ACTIVE=1' <<< "$env_out"
+grep -q 'export SAFE_INSTALL_ACTIVE=1' <<< "$reload_out"
+grep -q "$repo_root/bin" <<< "$reload_out"
 grep -q 'safe-install: added activation' <<< "$init_out"
 grep -q 'safe-install: installed pre-commit guard' <<< "$init_out"
 grep -q 'safe-install: updated Claude PATH' <<< "$init_out"

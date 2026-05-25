@@ -66,6 +66,9 @@ safe-install is installed.
 For this terminal only:
   source "$install_dir/activate.sh"
 
+For an already-open Codex or coding-agent shell:
+  eval "\$($install_dir/bin/safe-install reload)"
+
 For future terminals and supported agents:
   restart Terminal and Claude Code, then run:
   safe-install doctor

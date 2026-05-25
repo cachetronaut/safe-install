@@ -80,6 +80,13 @@ safe-install doctor
 
 If it reports `bypassing safe-install`, start Codex from a terminal that has sourced `activate.sh`, or add the same PATH prefix to the environment launcher you use for Codex.
 
+For an already-open Codex worktree after install or update, refresh the current shell in place:
+
+```sh
+eval "$($HOME/.local/share/safe-install/bin/safe-install reload)"
+safe-install doctor
+```
+
 ## Runtime Startup
 
 Run this when you want to warm the container runtime before an install:

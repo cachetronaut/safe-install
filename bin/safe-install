@@ -10,6 +10,7 @@ Usage:
   safe-install doctor
   safe-install start
   safe-install env
+  safe-install reload
   safe-install guard
   safe-install install-git-hook [--repo <path>]
   safe-install --pm pnpm -- install
@@ -434,6 +435,7 @@ init_project() {
   else
     printf 'safe-install: current shell not protected yet\n'
     printf 'safe-install: run: source %s/activate.sh\n' "$(safe_install_root)"
+    printf 'safe-install: for an open Codex/agent shell, run: eval "$(%s/bin/safe-install reload)"\n' "$(safe_install_root)"
     printf 'safe-install: or open a new terminal after shell activation was installed\n'
   fi
 }
@@ -455,6 +457,11 @@ if [[ "${1:-}" == "start" ]]; then
 fi
 
 if [[ "${1:-}" == "env" ]]; then
+  print_env
+  exit 0
+fi
+
+if [[ "${1:-}" == "reload" ]]; then
   print_env
   exit 0
 fi

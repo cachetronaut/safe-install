@@ -95,6 +95,7 @@ If you already cloned the repo locally, run:
 
 Open a new terminal after `init`, or run `source /path/to/safe-install/activate.sh` once in the current terminal.
 Restart Claude Code after `init`, then run `safe-install doctor` inside Claude.
+For an already-open Codex or coding-agent shell, run `eval "$($HOME/.local/share/safe-install/bin/safe-install reload)"` so the current process prepends the installed wrappers without a restart.
 
 ## Normal Use
 
@@ -205,6 +206,13 @@ For Codex CLI sessions launched from your shell, shell activation is enough. For
 
 ```sh
 PATH=/path/to/safe-install/bin:$PATH
+```
+
+For an already-open Codex worktree, run this inside that session after installing or updating:
+
+```sh
+eval "$($HOME/.local/share/safe-install/bin/safe-install reload)"
+safe-install doctor
 ```
 
 ## Wrapped Commands
