@@ -109,6 +109,8 @@ SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 
 For Node, Bun, and uv package executables, use the protected ecosystem launcher instead of host paths or direct `node_modules/.bin` guesses: `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`.
 
+For uv project work, keep the project's declared Python constraint intact. The wrapper uses a generic uv image and a container-local `.venv`, so do not downgrade `requires-python` or similar project metadata just to match the wrapper image.
+
 For Python package work, `pip install ...` creates or reuses `.venv` in the current project. Later `python` and `python3` calls automatically use that virtualenv through the safe-install shims, so agents should not retry with `python3 -m pip --user`, `--break-system-packages`, or a manually activated venv.
 
 ## Bypass

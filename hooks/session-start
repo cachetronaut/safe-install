@@ -22,6 +22,8 @@ Package-manager install commands should resolve through the plugin's bin wrapper
 
 For Node, Bun, and uv package executables, use pnpm exec, pnpm dlx, npx, bun run, bunx, uv run, or uv tool run instead of host paths or direct node_modules/.bin guesses.
 
+For uv project work, keep the project's declared Python constraint intact. The wrapper uses a generic uv image and a container-local .venv, so do not downgrade requires-python or similar project metadata just to match the wrapper image.
+
 Python package installs use a project .venv. After pip install succeeds, run python or python3 normally from the project; do not retry with python3 -m pip --user, --break-system-packages, or manual venv activation.
 
 The first real install will try to start OrbStack or Docker Desktop on macOS when Docker is not reachable.

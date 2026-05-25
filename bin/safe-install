@@ -553,7 +553,7 @@ case "$pm" in
     container_prefix='exec bun'
     ;;
   uv)
-    image="${image:-ghcr.io/astral-sh/uv:python3.12-bookworm}"
+    image="${image:-ghcr.io/astral-sh/uv:debian}"
     container_prefix='exec uv'
     ;;
   pip)
@@ -602,6 +602,10 @@ docker_args=(
   --mount "$mount_spec"
   --workdir /work
 )
+
+if [[ "$pm" == "uv" ]]; then
+  docker_args+=(--mount "type=volume,dst=/work/.venv")
+fi
 
 if [[ -t 0 && -t 1 ]]; then
   docker_args+=(-it)

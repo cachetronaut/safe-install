@@ -113,6 +113,8 @@ The wrappers intercept install-like operations and run them in the container. Ot
 
 Python is the exception for local usability: bare `pip install ...` creates or reuses `.venv` in the current project, installs there with the host Python, and subsequent `python` or `python3` commands automatically use that `.venv` through the safe-install shims. This avoids disappearing container-only installs and macOS externally-managed Python failures.
 
+`uv` uses the official Debian uv image rather than a Python-minor-specific image, so project Python constraints such as Python 3.14 remain valid. The wrapper hides a host `.venv` behind a container-local volume during uv commands because virtual environments are platform-specific.
+
 For packages that expose command-line tools, use the protected ecosystem launchers instead of guessing host paths:
 
 ```sh
