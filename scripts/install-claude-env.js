@@ -16,10 +16,21 @@ settings.env = settings.env || {};
 const prefix = path.join(root, "bin");
 const fallbackPath = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
 const current = [settings.env.PATH || "", process.env.PATH || "", fallbackPath].join(":");
+const seen = new Set();
 const parts = current
   .split(":")
   .filter((part) => part && part !== "${PATH}" && part !== "$PATH")
-  .filter((part) => path.basename(part) !== "bin" || path.basename(path.dirname(part)) !== "safe-install");
+  .filter((part) => path.basename(part) !== "bin" || path.basename(path.dirname(part)) !== "safe-install")
+  .filter((part) => !part.includes("/.codex/tmp/"))
+  .filter((part) => !part.includes("/codex.system/"))
+  .filter((part) => !part.startsWith("/Applications/Codex.app/"))
+  .filter((part) => {
+    if (seen.has(part)) {
+      return false;
+    }
+    seen.add(part);
+    return true;
+  });
 settings.env.PATH = [prefix, ...parts].join(":");
 
 fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);

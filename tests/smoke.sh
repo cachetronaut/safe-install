@@ -102,6 +102,8 @@ grep -q 'safe-install" guard' "$tmp_dir/repo/.git/hooks/pre-commit"
 grep -q "$repo_root/bin" "$tmp_dir/claude/settings.json"
 ! grep -q '\${PATH}' "$tmp_dir/claude/settings.json"
 ! grep -q '/tmp/old-safe-install/bin' "$tmp_dir/claude/settings.json"
+! grep -q '.codex/tmp' "$tmp_dir/claude/settings.json"
+! grep -q 'codex.system' "$tmp_dir/claude/settings.json"
 grep -q '"EXISTING": "1"' "$tmp_dir/claude/settings.json"
 
 git clone -q "$repo_root" "$tmp_dir/source"
