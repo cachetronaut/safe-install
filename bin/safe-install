@@ -187,10 +187,32 @@ install_shell_activation() {
 
   mkdir -p "$(dirname "$shell_rc")"
   touch "$shell_rc"
-  if grep -Fqx "$line" "$shell_rc"; then
-    printf 'safe-install: shell already configured: %s\n' "$shell_rc"
-    return 0
-  fi
+  local tmp
+  tmp="$(mktemp)"
+  awk '
+    $0 == "# safe-install dependency isolation" {
+      pending_marker = 1
+      next
+    }
+    pending_marker && $0 ~ /^source .*safe-install\/activate\.sh$/ {
+      pending_marker = 0
+      next
+    }
+    pending_marker {
+      print "# safe-install dependency isolation"
+      pending_marker = 0
+    }
+    $0 ~ /^source .*safe-install\/activate\.sh$/ {
+      next
+    }
+    { print }
+    END {
+      if (pending_marker) {
+        print "# safe-install dependency isolation"
+      }
+    }
+  ' "$shell_rc" > "$tmp"
+  mv "$tmp" "$shell_rc"
 
   {
     printf '\n# safe-install dependency isolation\n'

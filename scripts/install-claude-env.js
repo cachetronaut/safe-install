@@ -14,8 +14,13 @@ const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
 settings.env = settings.env || {};
 
 const prefix = path.join(root, "bin");
-const current = settings.env.PATH || "${PATH}";
-settings.env.PATH = current.includes(prefix) ? current : `${prefix}:${current}`;
+const fallbackPath = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+const current = [settings.env.PATH || "", process.env.PATH || "", fallbackPath].join(":");
+const parts = current
+  .split(":")
+  .filter((part) => part && part !== "${PATH}" && part !== "$PATH")
+  .filter((part) => path.basename(part) !== "bin" || path.basename(path.dirname(part)) !== "safe-install");
+settings.env.PATH = [prefix, ...parts].join(":");
 
 fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
 console.log(`safe-install: updated Claude PATH in ${settingsPath}`);
