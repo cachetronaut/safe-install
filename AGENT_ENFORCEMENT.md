@@ -103,7 +103,7 @@ These should print a Docker command when `SAFE_INSTALL_DRY_RUN=1` is set:
 
 ```sh
 SAFE_INSTALL_DRY_RUN=1 pnpm install
-SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
+SAFE_INSTALL_DRY_RUN=1 pnpm dlx vite --version
 SAFE_INSTALL_DRY_RUN=1 npm ci
 SAFE_INSTALL_DRY_RUN=1 npx prettier --version
 SAFE_INSTALL_DRY_RUN=1 bun install
@@ -114,7 +114,7 @@ SAFE_INSTALL_DRY_RUN=1 uv pip install pytest
 SAFE_INSTALL_DRY_RUN=1 pip install -r requirements.txt
 ```
 
-For Node, Bun, and uv package executables, use the protected ecosystem launcher instead of host paths or direct `node_modules/.bin` guesses: `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`.
+For Node, Bun, and uv package executables, use the ecosystem launcher instead of host paths or direct `node_modules/.bin` guesses: `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`. Note that `pnpm exec`, `pnpm run`, and `bun run` run local code on the host (not sandboxed); only the remote-fetching launchers (`pnpm dlx`, `npx`, `bunx`) are sandboxed.
 
 For uv project work, keep the project's declared Python constraint intact. The wrapper uses a generic uv image and a container-local `.venv`, so do not downgrade `requires-python` or similar project metadata just to match the wrapper image.
 

@@ -20,7 +20,11 @@ python3 -m json.tool "$repo_root/hooks/hooks.json" >/dev/null
 python3 -m json.tool "$repo_root/hooks/hooks-cursor.json" >/dev/null
 
 pnpm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm install)"
-pnpm_exec_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version)"
+# exec/run run already-installed local code and must pass through to the host,
+# never get sandboxed (sandboxing them as root against the bind mount corrupts
+# git-aware tooling such as lint-staged pre-commit hooks).
+pnpm_exec_passthrough="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpm exec true 2>&1 || true)"
+bun_run_passthrough="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 bun run --help 2>&1 || true)"
 pnpx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 pnpx cowsay hi)"
 npm_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npm ci)"
 npx_dry="$(PATH="$repo_root/bin:$PATH" SAFE_INSTALL_DRY_RUN=1 npx prettier --version)"
@@ -55,8 +59,8 @@ init_out="$(PATH="$repo_root/bin:$PATH" "$repo_root/bin/safe-install" init --rep
 init_again_out="$(PATH="$repo_root/bin:$PATH" "$repo_root/bin/safe-install" init --repo "$tmp_dir/repo" --shell-rc "$tmp_dir/zshrc" --claude-settings "$tmp_dir/claude/settings.json" --no-start)"
 
 grep -q -- '--ignore-scripts' <<< "$pnpm_dry"
-grep -q -- 'safe-install-pnpm' <<< "$pnpm_exec_dry"
-grep -q -- 'vite' <<< "$pnpm_exec_dry"
+! grep -q -- 'safe-install-pnpm' <<< "$pnpm_exec_passthrough"
+! grep -q -- 'safe-install-bun' <<< "$bun_run_passthrough"
 grep -q -- 'safe-install-pnpm' <<< "$pnpx_dry"
 grep -q -- 'cowsay' <<< "$pnpx_dry"
 grep -q -- '--ignore-scripts' <<< "$npm_dry"

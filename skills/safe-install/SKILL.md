@@ -20,7 +20,7 @@ For a dry run that proves interception without installing packages:
 
 ```sh
 SAFE_INSTALL_DRY_RUN=1 pnpm install
-SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
+SAFE_INSTALL_DRY_RUN=1 pnpm dlx vite --version
 SAFE_INSTALL_DRY_RUN=1 npm ci
 SAFE_INSTALL_DRY_RUN=1 npx prettier --version
 SAFE_INSTALL_DRY_RUN=1 bun install
@@ -54,5 +54,5 @@ safe-install init
 - Use `SAFE_INSTALL_DRY_RUN=1` before a real install when troubleshooting.
 - If Docker is not reachable on macOS, `safe-install` will try to start OrbStack or Docker Desktop during the real install.
 - Keep secrets out of project directories because the project directory is mounted into the container.
-- For Node, Bun, and uv package executables, use `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`; do not guess host paths or bypass the wrappers.
+- For Node, Bun, and uv package executables, use `pnpm exec`, `pnpm dlx`, `npx`, `bun run`, `bunx`, `uv run`, or `uv tool run`; do not guess host paths. Note `pnpm exec`, `pnpm run`, and `bun run` run local code on the host and are not sandboxed; only remote-fetching launchers (`pnpm dlx`, `npx`, `bunx`) are.
 - After `pip install ...`, run Python with `python` or `python3` normally; the shims auto-use `.venv` from inside the project.

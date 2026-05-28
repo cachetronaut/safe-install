@@ -116,14 +116,14 @@ Python is the exception for local usability: bare `pip install ...` creates or r
 
 `uv` uses the official Debian uv image rather than a Python-minor-specific image, so project Python constraints such as Python 3.14 remain valid. The wrapper hides a host `.venv` behind a container-local volume during uv commands because virtual environments are platform-specific. It also moves uv's downloaded Python interpreters and cache out of `/tmp/safe-home` so `uv run` can execute them inside the container.
 
-For packages that expose command-line tools, use the protected ecosystem launchers instead of guessing host paths:
+For packages that expose command-line tools, use the ecosystem launchers instead of guessing host paths. `pnpm dlx`/`npx`/`bunx` fetch-and-run remote packages and are sandboxed; `pnpm exec`/`pnpm run`/`bun run` run already-installed local code on the host:
 
 ```sh
-pnpm exec <command>
-pnpm dlx <package>
-npx <package>
-bunx <package>
-bun run <command>
+pnpm exec <command>   # local, runs on host
+pnpm dlx <package>    # remote, sandboxed
+npx <package>         # remote, sandboxed
+bunx <package>        # remote, sandboxed
+bun run <command>     # local, runs on host
 uv run <command>
 uv tool run <tool>
 ```
@@ -142,7 +142,7 @@ Preview without running Docker:
 
 ```sh
 SAFE_INSTALL_DRY_RUN=1 pnpm install
-SAFE_INSTALL_DRY_RUN=1 pnpm exec vite --version
+SAFE_INSTALL_DRY_RUN=1 pnpm dlx vite --version
 SAFE_INSTALL_DRY_RUN=1 npx prettier --version
 SAFE_INSTALL_DRY_RUN=1 bun install
 SAFE_INSTALL_DRY_RUN=1 bunx cowsay hi
@@ -217,15 +217,17 @@ safe-install doctor
 
 ## Wrapped Commands
 
-- `pnpm`: `install`, `i`, `add`, `update`, `up`, `import`, `dlx`, `exec`, `run`, `create`
+- `pnpm`: `install`, `i`, `add`, `update`, `up`, `import`, `dlx`, `create`
 - `pnpx`: package execution through `pnpm dlx`
 - `npm`: `install`, `i`, `ci`, `update`, `up`, `exec`, `x`, `init`
 - `npx`: package execution through `npm exec`
-- `bun`: `install`, `i`, `add`, `remove`, `rm`, `update`, `up`, `run`, `x`, `create`, `init`
+- `bun`: `install`, `i`, `add`, `remove`, `rm`, `update`, `up`, `x`, `create`, `init`
 - `bunx`: package execution through `bun x`
 - `uv`: `sync`, `add`, `pip`, `tool`, `python`, `run`
 - `pip` and `pip3`: `install`, `wheel`, `download`
 - `python` and `python3`: auto-dispatch to a project `.venv` when one exists, otherwise pass through
+
+`pnpm exec`, `pnpm run`, and `bun run` are intentionally **not** wrapped. They invoke already-installed, local, trusted code, so they run on the host. Sandboxing them would run the tool as root inside the container against the bind-mounted repo and corrupt git-aware tooling (for example, a lint-staged pre-commit hook whose stash/restore would rewrite the host index). Remote-fetching execution still goes through the container via `pnpm dlx`/`pnpm create`, `npx`/`npm exec`, and `bunx`/`bun x`/`bun create`.
 
 Bypass is explicit:
 
