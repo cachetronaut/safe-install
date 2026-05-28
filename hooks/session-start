@@ -13,16 +13,16 @@ fi
 
 message="safe-install plugin is enabled.
 
-Package-manager install commands should resolve through the plugin's bin wrappers:
-- pnpm install, pnpm add, pnpm update, pnpm exec, pnpm dlx, pnpx
+Commands that fetch & execute package code are sandboxed in a container; just run them normally and the wrappers handle it:
+- pnpm install, pnpm add, pnpm update, pnpm dlx, pnpm create, pnpx
 - npm install, npm ci, npm exec, npm init, npx
-- bun install, bun add, bun update, bun run, bun x, bunx
+- bun install, bun add, bun update, bun x, bun create, bunx
 - uv sync, uv add, uv pip, uv tool, uv python, uv run
 - pip install, pip wheel, pip download
 
-If this is an already-open Codex or coding-agent shell after safe-install was installed or updated, run eval \"\$(safe-install reload)\" and then safe-install doctor before dependency work.
+The pnpm exec, pnpm run, and bun run commands are NOT sandboxed: they invoke already-installed, local, trusted code and run on the host. This is deliberate — sandboxing them runs the tool as root inside the container against the bind-mounted repo, which corrupts git-aware tooling such as a lint-staged pre-commit hook. Use them freely to run local binaries and scripts.
 
-For Node, Bun, and uv package executables, use pnpm exec, pnpm dlx, npx, bun run, bunx, uv run, or uv tool run instead of host paths or direct node_modules/.bin guesses.
+If this is an already-open Codex or coding-agent shell after safe-install was installed or updated, run eval \"\$(safe-install reload)\" and then safe-install doctor before dependency work.
 
 For uv project work, keep the project's declared Python constraint intact. The wrapper uses a generic uv image and a container-local .venv, so do not downgrade requires-python or similar project metadata just to match the wrapper image.
 

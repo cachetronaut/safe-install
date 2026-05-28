@@ -8,7 +8,10 @@ fi
 shim_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IFS=':' read -r -a path_parts <<< "$PATH"
 for dir in "${path_parts[@]}"; do
-  [[ "$dir" == "$shim_dir" ]] && continue
+  # Skip every safe-install shim dir (own dir, a case-variant of it, or a
+  # second install) so passthrough resolves the real host tool instead of
+  # looping wrapper -> wrapper forever when no real tool is on PATH.
+  [[ -e "$dir/safe-install" ]] && continue
   if [[ -x "$dir/npx" ]]; then
     exec "$dir/npx" "$@"
   fi
